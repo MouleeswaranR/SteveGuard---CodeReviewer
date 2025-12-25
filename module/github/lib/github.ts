@@ -28,35 +28,43 @@ export const getGithubToken=async()=>{
 }
 
 
-export async function fetchUserContributions(token:string,username:string){
-    const octokit=new Octokit({auth:token});
+export async function fetchUserContributions(token: string, username: string) {
+    const octokit = new Octokit({ auth: token });
 
-    const query=`
-    query($username:String!){
-    user(login:$username){
-        contributionCollection{
-            contributionCalendar{
-                totalContributions
-                weeks{
-                    contributionDays{
-                        contributionCount
-                        data
-                        color
-                    }
-                }
+    // Calculate dates for the last year (explicitly for reliability)
+    const today = new Date();
+    const oneYearAgo = new Date(today);
+    oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+    const query = `
+    query($username: String!, $from: DateTime!, $to: DateTime!) {
+      user(login: $username) {
+        contributionsCollection(from: $from, to: $to) {
+          contributionCalendar {
+            totalContributions
+            weeks {
+              contributionDays {
+                date
+                contributionCount
+                color
+              }
             }
+          }
         }
+      }
     }
-    }
-    `
-
+    `;
 
     try {
-        const response:any=await octokit.graphql(query,{
-            username
-        })
-        return response.user.contributionCollection.contributionCalendar
+        const response: any = await octokit.graphql(query, {
+            username,
+            from: oneYearAgo.toISOString(),
+            to: today.toISOString(),
+        });
+
+        return response.user.contributionsCollection.contributionCalendar;
     } catch (error) {
-        
+        console.error("Error fetching contributions:", error);
+        return null;
     }
 }
