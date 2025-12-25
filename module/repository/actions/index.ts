@@ -3,6 +3,7 @@ import prisma from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createWebhook, getRepositoirs } from "@/module/github/lib/github";
+import { inngest } from "@/inngest/client";
 
 
 export const fetchRepositories=async(page:number=1,perPage:number=10)=>{
@@ -58,7 +59,21 @@ export const connectRepository=async(owner:string,repo:string,githubId:number)=>
 
     //increment repo count for usage tracking
 
-    // trigger repo indexing
+    // trigger repo indexing using inngest in pinecone
+    try {
+        await inngest.send({
+            name:"repository.connected",
+            data:{
+                owner,
+                repo,
+                userId:session.user.id
+            }
+        })
+    } catch (error) {
+        console.error("Failed to trigger repository indexing:",error);
+       
+    }
+
 
     return webhook;
 }

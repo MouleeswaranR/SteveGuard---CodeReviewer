@@ -142,3 +142,64 @@ export const deleteWebhook=async(owner:string,repo:string)=>{
   }
 
 }
+
+
+export async function getRepoFileContents(
+  token: string,
+  owner: string,
+  repo: string,
+  path: string = ""
+): Promise<{ path: string; content: string }[]> {
+  const octokit = new Octokit({ auth: token });
+
+  const { data } = await octokit.rest.repos.getContent({
+    owner,
+    repo,
+    path,
+  });
+
+  // If it's a single file
+  if (!Array.isArray(data)) {
+    if (data.type === "file" && data.content) {
+      return [
+        {
+          path: data.path,
+          content: Buffer.from(data.content, "base64").toString("utf-8"),
+        },
+      ];
+    }
+    return []; // submodules or empty dirs return object but no content
+  }
+
+  // It's a directory listing
+  let files: { path: string; content: string }[] = [];
+
+  for (const item of data) {
+    if (item.type === "file") {
+      // Skip binary/non-text files
+      if (item.path.match(/\.(png|jpg|jpeg|gif|svg|ico|pdf|zip|tar|gz|bin|exe)$/i)) {
+        continue;
+      }
+
+      const { data: fileData } = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        path: item.path,
+      });
+
+      // fileData should be an object (single file), not array
+      if (!Array.isArray(fileData) && fileData.type === "file" && fileData.content) {
+        files.push({
+          path: item.path,
+          content: Buffer.from(fileData.content, "base64").toString("utf-8"),
+        });
+      }
+    } else if (item.type === "dir") {
+      // Recursively get files from subdirectory
+      const subFiles = await getRepoFileContents(token, owner, repo, item.path);
+      files = files.concat(subFiles);
+    }
+  }
+
+  return files;
+}
