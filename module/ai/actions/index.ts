@@ -3,7 +3,7 @@
 import { inngest } from "@/inngest/client";
 import prisma from "@/lib/db";
 import { getPullRequestDiff } from "@/module/github/lib/github";
-
+import  {canCreateReview,incrementReviewCount} from "@/module/payment/lib/subscription"
 
 export async function reviewPullRequest(owner:string,repo:string,prNumber:number){
     try {
@@ -29,6 +29,12 @@ export async function reviewPullRequest(owner:string,repo:string,prNumber:number
         throw new Error(`Repository ${owner}/${repo} not found in database.Please reconnect the repository.`);
     }
 
+    const canReview=await canCreateReview(repository.user.id,repository.id);
+
+    if(!canReview){
+        throw new Error("Review limit reached for this repository. Please upgrade to PRO for unlimited reviews.")
+    }
+
     const githubAccount=repository.user.accounts[0];
     if(!githubAccount.accessToken){
         throw new Error("No Github access token for repository owner");
@@ -48,6 +54,8 @@ export async function reviewPullRequest(owner:string,repo:string,prNumber:number
         }
     })
 
+    await incrementReviewCount(repository.user.id,repository.id);
+    
     return {success:true,message:"Review Queued"};
 
     } catch (error) {

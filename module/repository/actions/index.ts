@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createWebhook, getRepositoirs } from "@/module/github/lib/github";
 import { inngest } from "@/inngest/client";
-
+import { canConnectRepository,decrementRepositoryCount,incrementRepositiryCount } from "@/module/payment/lib/subscription";
 
 export const fetchRepositories=async(page:number=1,perPage:number=10)=>{
     const session=await auth.api.getSession({
@@ -40,6 +40,11 @@ export const connectRepository=async(owner:string,repo:string,githubId:number)=>
         throw  new Error("Unauthorized")
     }
 
+    const canConnect=await canConnectRepository(session.user.id);
+
+    if(!canConnect){
+        throw new Error("Repository limt reached. Please upgrade to PRO dor unlimited repositories.")
+    }
     //check if user can connect more repo
 
     const webhook=await createWebhook(owner,repo);
@@ -55,9 +60,9 @@ export const connectRepository=async(owner:string,repo:string,githubId:number)=>
             userId:session.user.id
             }
         })
-    }
 
-    //increment repo count for usage tracking
+         //increment repo count for usage tracking
+    await incrementRepositiryCount(session.user.id)
 
     // trigger repo indexing using inngest in pinecone
     try {
@@ -73,7 +78,7 @@ export const connectRepository=async(owner:string,repo:string,githubId:number)=>
         console.error("Failed to trigger repository indexing:",error);
        
     }
-
+    }
 
     return webhook;
 }
