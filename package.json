@@ -4,8 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "postinstall": "prisma generate",
+    "build": "next build --no-turbo",
+    "start": "next start -p $PORT",
     "lint": "eslint"
   },
   "dependencies": {
