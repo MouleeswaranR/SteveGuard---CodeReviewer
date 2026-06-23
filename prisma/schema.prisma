@@ -66,11 +66,68 @@ model Review {
   prUrl String
   review String @db.Text
   status String @default("completed") // completed,failed,pending
+  userId String
+  traceId String @unique // For distributed tracing
+  overallScore Float? // LLM evaluation score
+  feedback ReviewFeedback[]
+  scores ReviewScore[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([repositoryId])
+  @@index([userId])
+  @@index([traceId])
   @@map("review")
+}
+
+model ReviewFeedback {
+  id String @id @default(cuid())
+  reviewId String
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  prNumber Int
+  repo String
+  commentId String
+  userId String
+  reaction String? // '+1', '-1'
+  wasActioned Boolean?
+  createdAt DateTime @default(now())
+  timestamp DateTime
+
+  @@index([reviewId])
+  @@index([userId])
+  @@map("review_feedback")
+}
+
+model ReviewScore {
+  id String @id @default(cuid())
+  reviewId String
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  accuracy Float
+  actionability Float
+  relevance Float
+  overallScore Float
+  metadata Json? // Stores falsePositives, strengths, weaknesses
+  createdAt DateTime @default(now())
+
+  @@index([reviewId])
+  @@map("review_score")
+}
+
+model LLMUsage {
+  id String @id @default(cuid())
+  model String
+  userId String
+  reviewId String
+  inputTokens Int
+  outputTokens Int
+  estimatedCostUsd Float
+  createdAt DateTime @default(now())
+  timestamp DateTime
+
+  @@index([userId])
+  @@index([reviewId])
+  @@index([timestamp])
+  @@map("llm_usage")
 }
 
 model UserUsage{

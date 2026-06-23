@@ -51,8 +51,56 @@ Any 5 digits
 - Generates structured AI feedback  
 - Posts review comments directly to GitHub  
 - Tracks usage and subscription limits  
-- Provides analytics dashboard  for your Github profile
+- Provides analytics dashboard for your Github profile
 - Manages repositories and reviews  
+
+---
+
+## 🏛️ System Architecture
+
+```mermaid
+graph TD
+    %% Define Styles
+    classDef frontend fill:#3b82f6,stroke:#1e3a8a,stroke-width:2px,color:#fff;
+    classDef backend fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef queue fill:#f59e0b,stroke:#b45309,stroke-width:2px,color:#fff;
+    classDef ai fill:#8b5cf6,stroke:#5b21b6,stroke-width:2px,color:#fff;
+    classDef db fill:#ef4444,stroke:#b91c1c,stroke-width:2px,color:#fff;
+    classDef observability fill:#64748b,stroke:#334155,stroke-width:2px,color:#fff;
+
+    %% Nodes
+    User(("👨‍💻 Developer"))
+    GithubWH["🐙 GitHub Webhook"]
+    NextJS["⚡ Next.js API<br/>(Rate Limit & Quota)"]:::frontend
+    Kafka[/"📥 Apache Kafka<br/>(pr.review.requested)"/]:::queue
+    Worker["⚙️ Bun Background Worker<br/>(Kafka Consumer)"]:::backend
+    
+    %% AI & Data
+    Redis[("🏎️ Redis<br/>(Vector Cache)")]:::db
+    Pinecone[("🌲 Pinecone<br/>(Vector DB / RAG)")]:::db
+    Gemini["🧠 Google Gemini 1.5 Pro<br/>(AI Review Generation)"]:::ai
+    
+    %% Observability
+    Prometheus["📈 Prometheus & Grafana"]:::observability
+    Jaeger["🔍 OpenTelemetry & Jaeger"]:::observability
+
+    %% Relationships
+    User -->|Creates PR| GithubWH
+    GithubWH -->|POST Webhook (<100ms)| NextJS
+    NextJS -->|Publishes Event| Kafka
+    Kafka -->|Consumes Event| Worker
+    
+    Worker -->|1. Check Cache| Redis
+    Redis -.->|Cache Miss| Pinecone
+    Pinecone -->|2. Retrieve Context| Worker
+    Worker -->|3. Send Context + Diff| Gemini
+    Gemini -->|4. Return AI Review| Worker
+    Worker -->|5. Post Comment| GithubWH
+    
+    Worker -.->|Metrics| Prometheus
+    Worker -.->|Traces| Jaeger
+    NextJS -.->|Traces| Jaeger
+```
 
 ---
 
@@ -75,11 +123,25 @@ Any 5 digits
 ## 🗄️ Database
 - PostgreSQL  
 - Prisma ORM  
+- Redis (Vector & Access Caching)
 
 ## 🧠 AI & RAG
-- Google Gemini 2.5 Flash  
+- Google Gemini 1.5 Pro  
 - gemini-embedding-001  
 - Pinecone (Vector Database)
+
+## ⚙️ Runtime & Execution
+- Node.js (Next.js Application)
+- Bun (High-performance Background Worker)
+
+## 📡 Messaging & Queues
+- Apache Kafka (Decoupled Webhook Processing)
+- ZooKeeper
+
+## 📈 Observability & Infrastructure
+- Prometheus (Metrics Collection)
+- Grafana (Metrics Visualization)
+- OpenTelemetry & Jaeger (Distributed Tracing)
 
 ## 🔁 Background Jobs
 - Inngest  
