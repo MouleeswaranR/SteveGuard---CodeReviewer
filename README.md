@@ -86,7 +86,7 @@ graph TD
 
     %% Relationships
     User -->|Creates PR| GithubWH
-    GithubWH -->|POST Webhook (<100ms)| NextJS
+    GithubWH -->|"POST Webhook (<100ms)"| NextJS
     NextJS -->|Publishes Event| Kafka
     Kafka -->|Consumes Event| Worker
     
