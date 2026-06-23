@@ -58,7 +58,7 @@ async function run() {
   console.log(' 📬 Messages in Kafka');
   console.log(' ⚡ Cache entries in Redis\n');
   
-  const numRequests = 20;
+  const numRequests = 5;
   for (let i = 1; i <= numRequests; i++) {
     const prNumber = Math.floor(Math.random() * 10000);
     console.log(`[${i}/${numRequests}] Sending webhook for simulated PR #${prNumber}...`);

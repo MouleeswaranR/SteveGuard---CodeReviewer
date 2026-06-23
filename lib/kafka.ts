@@ -196,7 +196,7 @@ export async function publishReviewFailed(
 export async function subscribeToReviewRequests(
   handler: (event: ReviewRequestEvent, message: KafkaMessage) => Promise<void>
 ): Promise<void> {
-  const c = await initializeConsumer('steveguard-review-processor');
+  const c = await initializeConsumer('steveguard-processor-v2');
   
   await c.subscribe({ topic: TOPICS.PR_REVIEW_REQUESTED, fromBeginning: false });
 
